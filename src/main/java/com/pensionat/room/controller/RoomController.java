@@ -10,6 +10,12 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+
+//Controllern tar emot datumen
+//Anropar roomAvailabilityService.findAvailableRooms(...)
+//listar lediga rum
+//Mappar till RoomResponse och returnerar som JSON
+
 @RestController
 @RequestMapping("/api/rooms")
 public class RoomController {
@@ -33,7 +39,7 @@ public class RoomController {
 
     @GetMapping("/available")
     public List<RoomResponse> getAvailableRooms(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate, //talar om för Spring standardformat
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         return roomAvailabilityService.findAvailableRooms(startDate, endDate)

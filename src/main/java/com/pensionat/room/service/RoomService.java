@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-
+// innehåller affärslogik kring rum - RoomRepository via konstruktor-injection — Spring skickar
 @Service
 public class RoomService {
 

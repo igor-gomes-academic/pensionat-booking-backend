@@ -129,4 +129,8 @@ public class BookingService {
 
         return bookingRepository.save(booking);
     }
+
+    public boolean hasActiveBookings(Long customerId) {
+        return bookingRepository.existsByCustomerIdAndBookingStatus(customerId, BookingStatus.ACTIVE);
+    }
 }

@@ -10,18 +10,21 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 
+//talar om för Spring att detta är en service
 @Service
 public class RoomAvailabilityService {
 
+    //tar in två repositories
     private final RoomRepository roomRepository;
     private final BookingRepository bookingRepository;
 
+    //Konstruktor-injection — Spring skickar in båda automatiskt
     public RoomAvailabilityService(RoomRepository roomRepository,
                                    BookingRepository bookingRepository) {
         this.roomRepository = roomRepository;
         this.bookingRepository = bookingRepository;
     }
-
+    // validering
     public List<RoomEntity> findAvailableRooms(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             throw new BadRequestException("Start and end dates are required");
@@ -33,6 +36,11 @@ public class RoomAvailabilityService {
             throw new BadRequestException("Start date cannot be in the past");
         }
 
+        //roomRepository.findAll() — hämta alla rum från databasen
+        //.stream() — gör om listan till en ström så vi kan filtrera den
+        //.filter(room -> ...) — behåll bara de rum som klarar villkoret
+        //!bookingRepository.existsBy... — villkoret: rummet ska inte ha någon krockande aktiv bokning
+        //.toList() — samla de kvarvarande (lediga) rummen i en ny lista
         return roomRepository.findAll().stream()
                 .filter(room -> !bookingRepository
                         .existsByRoomIdAndBookingStatusAndStartDateBeforeAndEndDateAfter(

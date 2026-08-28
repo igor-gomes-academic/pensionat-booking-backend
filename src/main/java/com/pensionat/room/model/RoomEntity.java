@@ -10,18 +10,18 @@ import lombok.Setter;
 @Setter
 @Table(name = "room")
 public class RoomEntity {
-
+// JPA-entitet som är mappad mot databasen.
     public RoomEntity() {
     }
 
-    @Id
+    @Id //primär nyckel och genererar id automatiskt
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true) // mappade som columner
     private int roomNumber;
 
-    @Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING) //säger till Hibernate att spara texten "SINGLE"/"DOUBLE" i databasen
     @Column(nullable = false)
     private RoomType roomType;
 
