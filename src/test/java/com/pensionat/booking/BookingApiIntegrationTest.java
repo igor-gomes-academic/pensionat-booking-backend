@@ -3,6 +3,7 @@ package com.pensionat.booking;
 import com.pensionat.booking.dto.BookingResponse;
 import com.pensionat.booking.dto.CreateBookingRequest;
 import org.apache.coyote.Response;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-//@TestPropertySource("file:.env")
 public class BookingApiIntegrationTest {
 
 
@@ -30,10 +30,15 @@ public class BookingApiIntegrationTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    private String url;
+
+    @BeforeEach
+    void setUp(){
+        url = "http://localhost:" + port + "/api/bookings";
+    }
+
     @Test
     void shouldReturn404WhenCustomerDoesNotExist() {
-        String url = "http://localhost:" + port + "/api/bookings";
-
         CreateBookingRequest request = new CreateBookingRequest(
                 99999L,
                 1L,
@@ -50,5 +55,14 @@ public class BookingApiIntegrationTest {
 
 
         assertEquals(HttpStatus.NOT_FOUND,response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturn200WhenGettingBookings(){
+
+        ResponseEntity<String> response =
+                restTemplate.getForEntity(url,String.class);
+
+        assertEquals(HttpStatus.OK,response.getStatusCode());
     }
 }
