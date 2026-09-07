@@ -161,6 +161,18 @@ docker compose --profile test down
 
 ---
 
+## Production Build
+
+The service uses a multi-stage Dockerfile that separates dependency installation, integration testing, application packaging and runtime execution.
+
+The production image contains only the executable JAR and the Java Runtime Environment. Build tools, source files and test dependencies are not included in the final image.
+
+The container runs as a non-root user and exposes the service on port `8080`.
+
+The `.dockerignore` file excludes local, development and generated files from the Docker build context.
+
+---
+
 ## Running the Complete System with Docker Compose
 
 The shared Docker Compose environment and setup instructions are maintained in the Customer Service repository:
