@@ -1,8 +1,6 @@
 package com.pensionat.booking;
 
-import com.pensionat.booking.dto.BookingResponse;
 import com.pensionat.booking.dto.CreateBookingRequest;
-import org.apache.coyote.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +10,6 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.web.client.HttpClientErrorException;
 
 import java.time.LocalDate;
 
