@@ -97,27 +97,37 @@ public class BookingService {
     }
 
     public BookingEntity updateBooking(Long id, UpdateBookingRequest request) {
+        log.info("Updating booking: bookingId = {}", id);
+
         BookingEntity booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Booking not found"));
+                .orElseThrow(() -> {
+                log.warn("Booking update failed: booking not found, bookingId = {}", id);
+                      return new NotFoundException("Booking not found");
+                });
 
         RoomEntity room = roomRepository.findById(request.roomId())
-                .orElseThrow(() -> new NotFoundException("Room not found"));
+                .orElseThrow(() -> {
+                    log.warn("Booking update failed: room not found, bookingId = {}", id);
+                    return new NotFoundException("Room not found");
+                });
 
         if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+            log.warn("Booking update failed: booking is already cancelled");
             throw new BadRequestException("Cancelled bookings cannot be updated");
         }
 
         if (!booking.getCustomerId().equals(request.customerId())) {
-            throw new BadRequestException(
-                    "Booking can only be updated by the customer who owns it"
-            );
+            log.warn("Booking updaate failed: Customer does not own booking, bookingId = {}", id);
+            throw new BadRequestException("Booking can only be updated by the customer who owns it");
         }
 
         if (!request.endDate().isAfter(request.startDate())) {
+            log.warn("Booking update failed: invalid booking dates, bookingId = {}", id);
             throw new BadRequestException("Check-out date must be after check-in date");
         }
 
         if (request.extraBed() && room.getRoomType() != RoomType.DOUBLE) {
+            log.warn("Booking update failed: extra bed requested for unsupported room type, bookingId = {}", id);
             throw new BadRequestException("Extra bed is only available to double rooms");
         }
 
@@ -131,6 +141,7 @@ public class BookingService {
                 );
 
         if (roomAlreadyBooked) {
+            log.warn("Booking update failed: room is already booked on selected dates, bookingId = {},roomId = {}", id, room.getId());
             throw new BadRequestException("Room is already booked on selected dates");
         }
 
@@ -141,7 +152,9 @@ public class BookingService {
         booking.setBookingStatus(BookingStatus.ACTIVE);
         booking.setExtraBed(request.extraBed());
 
-        return bookingRepository.save(booking);
+        BookingEntity saved = bookingRepository.save(booking);
+        log.info("Booking updated successfully: bookingId={}", saved.getId());
+        return saved;
     }
 
     public BookingEntity cancelBooking(Long id) {
