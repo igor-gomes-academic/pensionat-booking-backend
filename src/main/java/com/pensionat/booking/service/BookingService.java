@@ -11,6 +11,8 @@ import com.pensionat.room.model.RoomEntity;
 import com.pensionat.room.model.RoomType;
 import com.pensionat.room.repository.RoomRepository;
 import com.pensionat.client.CustomerClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +23,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final RoomRepository roomRepository;
     private final CustomerClient customerClient;
+    private static final Logger log = LoggerFactory.getLogger(BookingService.class);
 
     public BookingService(
             BookingRepository bookingRepository,
@@ -37,18 +40,27 @@ public class BookingService {
     }
 
     public BookingEntity createBooking(CreateBookingRequest request) {
+        log.info("Creating booking");
+
         RoomEntity room = roomRepository.findById(request.roomId())
-                .orElseThrow(() -> new NotFoundException("Room not found"));
+                .orElseThrow(() -> {
+                    log.warn("Booking creation failed: room not found");
+                    return new NotFoundException("Room not found");
+                });
+
 
         if (!customerClient.customerExists(request.customerId())) {
+            log.warn("Booking creation failed: room not found");
             throw new NotFoundException("Customer not found");
         }
 
         if (!request.endDate().isAfter(request.startDate())) {
+            log.warn("Booking creation rejected: invalid booking dates");
             throw new BadRequestException("Check-out date must be after check-in date");
         }
 
         if (request.extraBed() && room.getRoomType() != RoomType.DOUBLE) {
+            log.warn("Booking creation rejected: extra bed requested for unsupported room type");
             throw new BadRequestException("Extra bed is only available to double rooms");
         }
 
@@ -61,6 +73,7 @@ public class BookingService {
                 );
 
         if (roomAlreadyBooked) {
+            log.warn("Booking creation rejected: room is unavailable");
             throw new BadRequestException("Room is already booked on selected dates");
         }
 
@@ -73,8 +86,14 @@ public class BookingService {
         );
 
         booking.setExtraBed(request.extraBed());
-
-        return bookingRepository.save(booking);
+        try{
+            BookingEntity savedBooking = bookingRepository.save(booking);
+            log.info("Booking created successfully");
+            return savedBooking;
+        }catch (RuntimeException exception){
+            log.error("Failed to save booking", exception);
+            throw exception;
+        }
     }
 
     public BookingEntity updateBooking(Long id, UpdateBookingRequest request) {
