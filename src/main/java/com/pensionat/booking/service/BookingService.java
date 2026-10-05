@@ -145,16 +145,27 @@ public class BookingService {
     }
 
     public BookingEntity cancelBooking(Long id) {
+        log.info("Cancelling booking: bookingId={}", id);
+
         BookingEntity booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Booking not found"));
+                .orElseThrow(() -> {
+                    log.warn("Booking cancellation failed: bookingId={} not found", id);
+                    return new NotFoundException("Booking not found");
+
+                });
 
         if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+            log.warn("Booking cancellation rejected: bookingId={} is already cancelled", id);
             throw new BadRequestException("Booking is already cancelled");
         }
 
         booking.setBookingStatus(BookingStatus.CANCELLED);
 
-        return bookingRepository.save(booking);
+        BookingEntity savedBooking = bookingRepository.save(booking);
+
+        log.info("Booking cancelled successfully: bookingId={}", id);
+
+        return savedBooking;
     }
 
     public boolean hasActiveBookings(Long customerId) {
