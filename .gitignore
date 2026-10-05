@@ -46,4 +46,3 @@ dependency-reduced-pom.xml
 ### Environment variables ###
 .env
 .env.*
-!**/.env.example

@@ -38,8 +38,8 @@ public class BookingApiIntegrationTest {
         CreateBookingRequest request = new CreateBookingRequest(
                 99999L,
                 1L,
-                LocalDate.of(2026,11,1),
-                LocalDate.of(2026,11,4),false
+                LocalDate.now().plusDays(30),
+                LocalDate.now().plusDays(33),false
         );
 
         ResponseEntity<String> response =
