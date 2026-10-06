@@ -46,7 +46,7 @@ jobs:
         run: |
           DIGEST=$(docker buildx imagetools inspect \
             "${IMAGE_REPOSITORY}:staging" |
-            sed -n 's/^Digest: //p' |
+            sed -n 's/^Digest:[[:space:]]*//p' |
             head -n 1)
 
           if [[ ! "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
@@ -62,12 +62,12 @@ jobs:
         run: |
           EXISTING_VERSION_DIGEST=$(docker buildx imagetools inspect \
             "${IMAGE_REPOSITORY}:${GITHUB_REF_NAME}" 2>/dev/null |
-            sed -n 's/^Digest: //p' |
+            sed -n 's/^Digest:[[:space:]]*//p' |
             head -n 1 || true)
 
           CURRENT_PRODUCTION_DIGEST=$(docker buildx imagetools inspect \
             "${IMAGE_REPOSITORY}:production" 2>/dev/null |
-            sed -n 's/^Digest: //p' |
+            sed -n 's/^Digest:[[:space:]]*//p' |
             head -n 1 || true)
 
           SOURCE_DIGEST="${{ steps.staging.outputs.digest }}"
@@ -100,12 +100,12 @@ jobs:
         run: |
           VERSION_DIGEST=$(docker buildx imagetools inspect \
             "${IMAGE_REPOSITORY}:${GITHUB_REF_NAME}" |
-            sed -n 's/^Digest: //p' |
+            sed -n 's/^Digest:[[:space:]]*//p' |
             head -n 1)
 
           PRODUCTION_DIGEST=$(docker buildx imagetools inspect \
             "${IMAGE_REPOSITORY}:production" |
-            sed -n 's/^Digest: //p' |
+            sed -n 's/^Digest:[[:space:]]*//p' |
             head -n 1)
 
           SOURCE_DIGEST="${{ steps.staging.outputs.digest }}"
