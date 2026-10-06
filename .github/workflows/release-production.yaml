@@ -1,0 +1,133 @@
+name: Booking Backend Production Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: booking-backend-production-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    name: Promote staging image to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      IMAGE_REPOSITORY: ${{ secrets.DOCKERHUB_USERNAME }}/pensionat-booking-backend
+
+    steps:
+      - name: Validate release tag
+        shell: bash
+        run: |
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release tag: ${GITHUB_REF_NAME}"
+            echo "Expected format: v1.0.0"
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Resolve staging image digest
+        id: staging
+        shell: bash
+        run: |
+          DIGEST=$(docker buildx imagetools inspect \
+            "${IMAGE_REPOSITORY}:staging" |
+            sed -n 's/^Digest: //p' |
+            head -n 1)
+
+          if [[ ! "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Could not resolve a valid staging image digest."
+            exit 1
+          fi
+
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "Staging digest: ${DIGEST}"
+
+      - name: Protect release version
+        shell: bash
+        run: |
+          EXISTING_VERSION_DIGEST=$(docker buildx imagetools inspect \
+            "${IMAGE_REPOSITORY}:${GITHUB_REF_NAME}" 2>/dev/null |
+            sed -n 's/^Digest: //p' |
+            head -n 1 || true)
+
+          CURRENT_PRODUCTION_DIGEST=$(docker buildx imagetools inspect \
+            "${IMAGE_REPOSITORY}:production" 2>/dev/null |
+            sed -n 's/^Digest: //p' |
+            head -n 1 || true)
+
+          SOURCE_DIGEST="${{ steps.staging.outputs.digest }}"
+
+          if [[ -n "${EXISTING_VERSION_DIGEST}" ]]; then
+            if [[ "${EXISTING_VERSION_DIGEST}" != "${SOURCE_DIGEST}" ]]; then
+              echo "Release ${GITHUB_REF_NAME} already points to another image."
+              exit 1
+            fi
+
+            echo "Release ${GITHUB_REF_NAME} already points to this image."
+            echo "Allowing idempotent rerun."
+          elif [[ -n "${CURRENT_PRODUCTION_DIGEST}" &&
+                  "${CURRENT_PRODUCTION_DIGEST}" == "${SOURCE_DIGEST}" ]]; then
+            echo "The staging image is already deployed to production."
+            echo "A new release version requires a new staging image."
+            exit 1
+          fi
+
+      - name: Promote image
+        shell: bash
+        run: |
+          docker buildx imagetools create \
+            --tag "${IMAGE_REPOSITORY}:${GITHUB_REF_NAME}" \
+            --tag "${IMAGE_REPOSITORY}:production" \
+            "${IMAGE_REPOSITORY}@${{ steps.staging.outputs.digest }}"
+
+      - name: Verify promoted image
+        shell: bash
+        run: |
+          VERSION_DIGEST=$(docker buildx imagetools inspect \
+            "${IMAGE_REPOSITORY}:${GITHUB_REF_NAME}" |
+            sed -n 's/^Digest: //p' |
+            head -n 1)
+
+          PRODUCTION_DIGEST=$(docker buildx imagetools inspect \
+            "${IMAGE_REPOSITORY}:production" |
+            sed -n 's/^Digest: //p' |
+            head -n 1)
+
+          SOURCE_DIGEST="${{ steps.staging.outputs.digest }}"
+
+          if [[ "${VERSION_DIGEST}" != "${SOURCE_DIGEST}" ||
+                "${PRODUCTION_DIGEST}" != "${SOURCE_DIGEST}" ]]; then
+            echo "Promoted tags do not match the staging digest."
+            exit 1
+          fi
+
+          {
+            echo "## Production release"
+            echo ""
+            echo "- Version: \`${GITHUB_REF_NAME}\`"
+            echo "- Digest: \`${SOURCE_DIGEST}\`"
+            echo "- Source: \`staging\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install Railway CLI
+        run: npm install --global @railway/cli
+
+      - name: Deploy to Railway production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+        run: railway redeploy --service booking-service-production --yes
