@@ -52,7 +52,7 @@ Each service owns its own database. The Booking Service never reads from or writ
 - JUnit
 - Docker
 - Docker Compose
-
+- Railway
 ---
 
 ## Project Structure
