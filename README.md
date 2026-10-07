@@ -14,6 +14,183 @@ The application manages rooms, availability and the complete booking lifecycle. 
 
 ---
 
+## Branch Strategy
+
+The project follows GitHub Flow with short-lived branches created for specific changes.
+
+### Branch Workflow
+
+```text
+Update main
+    │
+    ▼
+Create a dedicated branch
+    │
+    ▼
+Commit and push changes
+    │
+    ▼
+Open a pull request
+    │
+    ▼
+Approval and successful CI
+    │
+    ▼
+Merge into main
+    │
+    ▼
+Delete the merged branch
+```
+
+### Branch Protection
+
+- New branches are created from an updated `main` branch
+- All changes are developed in dedicated branches
+- Changes are merged into `main` through pull requests
+- Each pull request requires at least one approval
+- The CI workflow must complete successfully before merging
+- Branches must be up to date with `main` before merging
+- Review conversations must be resolved before merging
+- Force pushes to `main` are blocked
+- Merged branches are automatically deleted
+- The `main` branch always represents the latest approved and validated state
+
+### Motivation
+
+This strategy was chosen because it provides a simple and collaborative workflow while protecting the production-ready branch. Small, focused branches make changes easier to review, while mandatory approval, branch synchronization and CI checks prevent unreviewed, outdated or failing code from reaching `main`.
+
+---
+
+## Merge Conflict Resolution
+
+A merge conflict occurred in `README.md` after `feature/conflict/a` was merged into `main` while `feature/conflict/b` modified the same line in the technology list.
+
+The conflict between `feature/conflict/b` and the updated `main` branch was resolved using the GitHub web editor. The duplicated Railway descriptions were consolidated into a single `Railway` entry. The resolution was then reviewed and approved before the pull request was merged.
+
+---
+
+## CI/CD and Deployment
+
+The CI/CD pipeline follows this process:
+
+- Runs build and integration tests for every pull request to `main`
+- Requires approval and successful CI before changes can be merged
+- Continues to CD only after CI succeeds on `main`
+- Builds and publishes a new Docker image only when image-related files have changed
+- Publishes the image with `staging` and `sha-<commit>` tags
+- Automatically deploys the `staging` image to Railway staging
+- Uses Git tags following `vX.Y.Z` to trigger production releases
+- Promotes the same tested image digest without rebuilding it
+- Publishes `vX.Y.Z` and `production` tags for traceability and rollback
+
+### Pipeline Workflow
+
+```text
+Pull Request to main
+     │
+     ▼
+[Booking Backend CI]
+  • Build application
+  • Run integration tests
+     │
+     │ Successful CI and approval
+     ▼
+Merge into main
+     │
+     ▼
+[Booking Backend CI]
+  • Build the merged commit
+  • Run integration tests again
+     │
+     │ Successful push CI emits workflow_run
+     ▼
+[Booking Backend CD]
+  • Check image-related changes
+  • Build the Docker image once
+  • Publish staging and sha-<commit>
+  • Request Railway staging redeploy
+     │
+     ▼
+Docker Hub → Railway staging
+     │
+     │ Validate the staging deployment
+     ▼
+Create Git tag vX.Y.Z
+     │
+     ▼
+[Booking Backend Production Release]
+  • Resolve the staging image digest
+  • Promote without rebuilding
+  • Publish vX.Y.Z and production
+  • Request Railway production redeploy
+     │
+     ▼
+Docker Hub → Railway production
+```
+
+> If no image-related files have changed, the CD workflow completes without publishing a new image or redeploying staging.
+
+### Image Traceability and Promotion
+
+```text
+Git commit
+f6532bd...
+     │
+     │ Build image once
+     ▼
+Docker image digest
+sha256:bacc568...
+     │
+     ├── staging
+     └── sha-f6532bd...
+              │
+              │ Create Git tag v1.0.1
+              ▼
+Production release
+     │
+     │ Resolve the staging digest
+     │ Promote without rebuilding
+     ▼
+Same Docker image digest
+sha256:bacc568...
+     │
+     ├── staging
+     ├── sha-f6532bd...
+     ├── v1.0.1
+     └── production
+              │
+              ▼
+Railway production redeploy
+```
+
+### Published Resources
+
+- **Docker Hub:** [View published image tags](https://hub.docker.com/repository/docker/igor88gomes/pensionat-booking-backend/tags)
+
+#### Staging
+
+- **Bookings:** [View staging bookings endpoint](https://booking-service-staging-staging-ebdb.up.railway.app/api/bookings)
+- **Rooms:** [View staging rooms endpoint](https://booking-service-staging-staging-ebdb.up.railway.app/api/rooms)
+- **Health:** [View staging health endpoint](https://booking-service-staging-staging-ebdb.up.railway.app/actuator/health)
+
+#### Production
+
+- **Bookings:** [View production bookings endpoint](https://booking-service-production-production.up.railway.app/api/bookings)
+- **Rooms:** [View production rooms endpoint](https://booking-service-production-production.up.railway.app/api/rooms)
+- **Health:** [View production health endpoint](https://booking-service-production-production.up.railway.app/actuator/health)
+
+---
+
+## Rollback Strategy
+
+Railway production deploys the Docker image referenced by the `production` tag. Each release also receives a version tag such as `v1.0.1`, with both tags pointing to the same immutable image digest.
+
+If a production incident occurs, the previous successful deployment can be restored from the Railway deployment history. Its digest can be matched to the corresponding version tag in Docker Hub.
+
+After the rollback, the problem is corrected in a new branch and released through the normal pull request, staging and production workflow.
+
+---
+
 ## Architecture Overview
 
 ```text
@@ -53,6 +230,7 @@ Each service owns its own database. The Booking Service never reads from or writ
 - Docker
 - Docker Compose
 - Railway
+
 ---
 
 ## Project Structure
