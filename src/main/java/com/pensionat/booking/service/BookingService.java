@@ -185,5 +185,3 @@ public class BookingService {
         return bookingRepository.existsByCustomerIdAndBookingStatus(customerId, BookingStatus.ACTIVE);
     }
 }
-
-// en snabb kommentar snabbt bara
