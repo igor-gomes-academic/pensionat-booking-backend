@@ -117,7 +117,7 @@ public class BookingService {
         }
 
         if (!booking.getCustomerId().equals(request.customerId())) {
-            log.warn("Booking updaate failed: Customer does not own booking, bookingId = {}", id);
+            log.warn("Booking update failed: Customer does not own booking, bookingId = {}", id);
             throw new BadRequestException("Booking can only be updated by the customer who owns it");
         }
 
