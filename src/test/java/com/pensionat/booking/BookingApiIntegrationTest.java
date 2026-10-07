@@ -61,4 +61,12 @@ public class BookingApiIntegrationTest {
 
         assertEquals(HttpStatus.OK,response.getStatusCode());
     }
+    @Test
+    void shouldReturn200WhenGettingBookingsFail(){
+
+        ResponseEntity<String> response =
+                restTemplate.getForEntity(url,String.class);
+
+        assertEquals(HttpStatus.CREATED,response.getStatusCode());
+    }
 }
